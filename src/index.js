@@ -4,8 +4,8 @@ const chalk = require('chalk');
 const { execSync } = require('child_process');
 
 // UTF-8 인코딩 설정
-process.env.LANG = 'ko_KR.UTF-8';
-process.env.LC_ALL = 'ko_KR.UTF-8';
+process.env.LANG = 'en_US.UTF-8';
+process.env.LC_ALL = 'en_US.UTF-8';
 
 const INTERVAL = 30000; // 30초로 증가 (CPU 사용량 감소)
 
@@ -36,7 +36,7 @@ const tableHeader = blessed.box({
   top: 5,
   height: 1,
   tags: true,
-  content: '{bold}ID   작업명                                                          상태      우선순위  진행률{/bold}',
+  content: '{bold}ID   Title                                                           Status    Priority  Progress{/bold}',
 });
 const table = blessed.list({
   top: 6,
@@ -57,7 +57,7 @@ const recommendedBox = blessed.box({
   bottom: 5,
   height: 3,
   tags: true,
-  label: ' 🔥 추천 다음 작업 ',
+  label: ' 🔥 Recommended Next Task ',
   border: 'line',
   style: { border: { fg: 'yellow' } },
 });
@@ -66,7 +66,7 @@ const subtaskBox = blessed.box({
   bottom: 2,
   height: 3,
   tags: true,
-  label: ' 선택된 작업의 서브태스크 ',
+  label: ' Selected Task Subtasks ',
   border: 'line',
   style: { border: { fg: 'cyan' } },
 });
@@ -108,15 +108,15 @@ let projectProgress = { tasks: {}, subtasks: {} };
 // 데모 데이터 추가 (task-master가 없을 때 사용)
 function getDemoTasks() {
   return [
-    { id: '1', title: '웹사이트 UI 개선', status: '완료', priority: 'high', progress: 100 },
-    { id: '2', title: '데이터베이스 최적화', status: '완료', priority: 'medium', progress: 100 },
-    { id: '3', title: 'API 문서 작성', status: '진행중', priority: 'low', progress: 75 },
-    { id: '4', title: '테스트 코드 작성', status: '진행중', priority: 'high', progress: 90 },
-    { id: '5', title: '배포 스크립트 작성', status: '진행중', priority: 'medium', progress: 60 },
-    { id: '6', title: '보안 검토', status: '대기', priority: 'high', progress: 0 },
-    { id: '7', title: '성능 최적화', status: '대기', priority: 'medium', progress: 0 },
-    { id: '8', title: '사용자 매뉴얼 작성', status: '대기', priority: 'low', progress: 0 },
-    { id: '19', title: '모니터링 시스템 구현', status: '대기', priority: 'medium', progress: 0 },
+    { id: '1', title: 'Improve Website UI', status: 'done', priority: 'high', progress: 100 },
+    { id: '2', title: 'Optimize Database', status: 'done', priority: 'medium', progress: 100 },
+    { id: '3', title: 'Write API Documentation', status: 'in-progress', priority: 'low', progress: 75 },
+    { id: '4', title: 'Write Test Code', status: 'in-progress', priority: 'high', progress: 90 },
+    { id: '5', title: 'Create Deployment Script', status: 'in-progress', priority: 'medium', progress: 60 },
+    { id: '6', title: 'Security Review', status: 'pending', priority: 'high', progress: 0 },
+    { id: '7', title: 'Performance Optimization', status: 'pending', priority: 'medium', progress: 0 },
+    { id: '8', title: 'Write User Manual', status: 'pending', priority: 'low', progress: 0 },
+    { id: '19', title: 'Implement Monitoring System', status: 'pending', priority: 'medium', progress: 0 },
   ];
 }
 
@@ -124,11 +124,11 @@ function getDemoTasks() {
 function getDemoNextTask() {
   return {
     id: '19',
-    title: '모니터링 시스템 구현',
+    title: 'Implement Monitoring System',
     status: 'pending',
     priority: 'medium',
     dependencies: '18',
-    description: '시스템 상태, 성능, 중요한 오류를 추적하기 위한 모니터링 및 알림 시스템을 생성합니다.',
+    description: 'Create a monitoring and alerting system to track system health, performance, and critical errors.',
     complexity: '8'
   };
 }
@@ -222,13 +222,13 @@ function parseTasks(output) {
     
     if (status.includes('✓') || status.includes('done')) {
       progress = 100;
-      statusText = '완료';
+      statusText = 'done';
     } else if (status.includes('○') || status.includes('pending')) {
       progress = 0;
-      statusText = '대기';
+      statusText = 'pending';
     } else if (status.includes('►') || status.includes('progress')) {
       progress = 50; // 진행중으로 가정
-      statusText = '진행중';
+      statusText = 'in-progress';
     }
     
     return {
@@ -238,7 +238,7 @@ function parseTasks(output) {
       priority: priority,
       dependencies: dependencies,
       progress: progress,
-      eta: progress === 100 ? '완료' : progress === 0 ? '대기중' : '진행중'
+      eta: progress === 100 ? 'done' : progress === 0 ? 'pending' : 'in-progress'
     };
   }).filter(task => task !== null);
 }
@@ -266,14 +266,14 @@ async function getSubtasks(taskId) {
         const subtaskMatch = line.match(/\s*(\d+\.\d+)\s*([✓○►]?)\s*(.+)/);
         if (subtaskMatch) {
           const [, id, statusSymbol, title] = subtaskMatch;
-          let status = '대기';
+          let status = 'pending';
           let progress = 0;
           
           if (statusSymbol === '✓') {
-            status = '완료';
+            status = 'done';
             progress = 100;
           } else if (statusSymbol === '►') {
-            status = '진행중';
+            status = 'in-progress';
             progress = 50;
           }
           
@@ -486,40 +486,40 @@ function parseNextTaskFromList(output) {
 }
 
 async function render(tasks) {
-  const now = new Date().toLocaleTimeString('ko-KR');
+  const now = new Date().toLocaleTimeString('en-US');
   
   // 상태별 필터링
   let filteredTasks = tasks;
   if (filterStatus === 'in-progress') {
-    filteredTasks = tasks.filter(task => task.status === '진행중');
+    filteredTasks = tasks.filter(task => task.status === 'in-progress');
   } else if (filterStatus === 'pending') {
-    filteredTasks = tasks.filter(task => task.status === '대기');
+    filteredTasks = tasks.filter(task => task.status === 'pending');
   } else if (filterStatus === 'done') {
-    filteredTasks = tasks.filter(task => task.status === '완료');
+    filteredTasks = tasks.filter(task => task.status === 'done');
   }
   // filterStatus가 null이면 전체 표시
   
-  const statusFilterText = filterStatus === 'in-progress' ? '진행중' : 
-                          filterStatus === 'pending' ? '대기' : 
-                          filterStatus === 'done' ? '완료' : '전체';
+  const statusFilterText = filterStatus === 'in-progress' ? 'in-progress' : 
+                          filterStatus === 'pending' ? 'pending' : 
+                          filterStatus === 'done' ? 'done' : 'all';
   
   // 프로젝트 진행률 표시
   const tasksProgressBar = projectProgress.tasks.percentage !== undefined ? 
-    `작업: ${progressBar(projectProgress.tasks.percentage)} ${projectProgress.tasks.percentage}%` : '';
+    `Tasks: ${progressBar(projectProgress.tasks.percentage)} ${projectProgress.tasks.percentage}%` : '';
   const subtasksProgressBar = projectProgress.subtasks.percentage !== undefined ? 
-    `서브작업: ${progressBar(projectProgress.subtasks.percentage)} ${projectProgress.subtasks.percentage}%` : '';
+    `Subtasks: ${progressBar(projectProgress.subtasks.percentage)} ${projectProgress.subtasks.percentage}%` : '';
   
   // 작업 개수 정보
   const taskCounts = projectProgress.tasks.done !== undefined ? 
-    `완료: ${projectProgress.tasks.done}개  진행중: ${projectProgress.tasks.inProgress}개  대기: ${projectProgress.tasks.pending}개  총: ${projectProgress.tasks.done + projectProgress.tasks.inProgress + projectProgress.tasks.pending}개` : 
-    `총 작업: ${tasks.length}개`;
+    `Done: ${projectProgress.tasks.done}   In Progress: ${projectProgress.tasks.inProgress}   Pending: ${projectProgress.tasks.pending}   Total: ${projectProgress.tasks.done + projectProgress.tasks.inProgress + projectProgress.tasks.pending}` : 
+    `Total Tasks: ${tasks.length}`;
   
   const subtaskCounts = projectProgress.subtasks.completed !== undefined && projectProgress.subtasks.total !== undefined ?
-    `서브작업: ${projectProgress.subtasks.completed}/${projectProgress.subtasks.total}개 완료` : '';
+    `Subtasks: ${projectProgress.subtasks.completed}/${projectProgress.subtasks.total} done` : '';
   
   // 2줄로 압축 표시
-  const line1 = `{bold}Task Monitor{/} - ${now} ${filterPriority ? `(우선순위: ${filterPriority})` : ''} (상태: ${statusFilterText})  |  ${tasksProgressBar}  |  ${subtasksProgressBar}`;
-  const line2 = `${taskCounts}${subtaskCounts ? `  |  ${subtaskCounts}` : ''}  |  표시 중: ${filteredTasks.length}건`;
+  const line1 = `{bold}Task Monitor{/} - ${now} ${filterPriority ? `(Priority: ${filterPriority})` : ''} (Status: ${statusFilterText})  |  ${tasksProgressBar}  |  ${subtasksProgressBar}`;
+  const line2 = `${taskCounts}${subtaskCounts ? `  |  ${subtaskCounts}` : ''}  |   Displaying: ${filteredTasks.length} tasks`;
   
   header.setContent(`${line1}\n${line2}`);
 
@@ -541,7 +541,7 @@ async function render(tasks) {
   table.setItems(displayItems.map(item => {
     // 메인 테스크만 표시 (60자로 확장)
     const color = item.priority === 'high' ? 'red' : item.priority === 'medium' ? 'yellow' : 'green';
-    const statusColor = item.status === '완료' ? 'green' : item.status === '진행중' ? 'blue' : 'gray';
+    const statusColor = item.status === 'done' ? 'green' : item.status === 'in-progress' ? 'blue' : 'gray';
     const truncatedTitle = item.title.length > 60 ? item.title.substring(0, 57) + '...' : item.title;
     return `{${color}-fg}${item.id.padEnd(4)} ${truncatedTitle.padEnd(60)} {${statusColor}-fg}${item.status.padEnd(8)}{/} ${item.priority.padEnd(8)} ${progressBar(item.progress)} ${item.progress.toString().padStart(3)}%{/}`;
   }));
@@ -550,8 +550,8 @@ async function render(tasks) {
   const nextTask = await getNextTask();
   if (nextTask && nextTask.id) {
     const priorityColor = nextTask.priority === 'high' ? 'red' : nextTask.priority === 'medium' ? 'yellow' : 'green';
-    const priorityText = nextTask.priority === 'high' ? '높음' : nextTask.priority === 'medium' ? '중간' : '낮음';
-    const statusText = nextTask.status === 'in-progress' ? '진행중' : nextTask.status === 'pending' ? '대기' : nextTask.status === 'done' ? '완료' : nextTask.status;
+    const priorityText = nextTask.priority === 'high' ? 'high' : nextTask.priority === 'medium' ? 'medium' : 'low';
+    const statusText = nextTask.status === 'in-progress' ? 'in-progress' : nextTask.status === 'pending' ? 'pending' : nextTask.status === 'done' ? 'done' : nextTask.status;
     const statusSymbol = nextTask.status === 'in-progress' ? '►' : nextTask.status === 'pending' ? '○' : nextTask.status === 'done' ? '✓' : '?';
     
     // 제목과 설명을 각각 다른 줄에 표시
@@ -560,30 +560,30 @@ async function render(tasks) {
       nextTask.description.substring(0, 62) + '...' : nextTask.description || '';
     
     // 복잡도 정보 처리
-    const complexityInfo = nextTask.complexity ? ` | 복잡도: ${nextTask.complexity}` : '';
+    const complexityInfo = nextTask.complexity ? ` |  Complexity: ${nextTask.complexity}` : '';
     
-    let content = `{bold}{yellow-fg}🔥 추천 작업: #{${nextTask.id}} ${shortTitle}{/}\n`;
-    content += `{${priorityColor}-fg}우선순위: ${priorityText}{/} ${statusSymbol} ${statusText}${nextTask.dependencies ? ` | 종속성: ${nextTask.dependencies}` : ''}${complexityInfo}\n`;
+    let content = `{bold}{yellow-fg}🔥 Recommended Task: #{${nextTask.id}} ${shortTitle}{/}\n`;
+    content += `{${priorityColor}-fg}Priority: ${priorityText}{/} ${statusSymbol} ${statusText}${nextTask.dependencies ? ` |  Dependencies: ${nextTask.dependencies}` : ''}${complexityInfo}\n`;
     
     if (shortDesc) {
       content += `${shortDesc}`;
     } else {
-      content += `{gray-fg}상세 정보: task-master show ${nextTask.id}{/}`;
+      content += `{gray-fg}Details: task-master show ${nextTask.id}{/}`;
     }
     
     recommendedBox.setContent(content);
   } else {
     // 추천 작업이 없을 때
-    recommendedBox.setContent(`{bold}{yellow-fg}🔥 추천 다음 작업{/}\n` +
-      `{gray-fg}현재 추천할 작업이 없습니다.{/}\n` +
-      `{gray-fg}새 작업을 추가하거나 기존 작업 상태를 확인하세요.{/}`);
+    recommendedBox.setContent(`{bold}{yellow-fg}🔥 No Recommended Task{/}\n` +
+      `{gray-fg}No tasks to recommend at this time.{/}\n` +
+      `{gray-fg}Add new tasks or check the status of existing tasks.{/}`);
   }
 
-  footer.setContent('{gray-fg}↑↓ 선택 / f 우선순위 / s 상태 / r 새로고침 / q 종료{/}');
+  footer.setContent('{gray-fg}↑↓ Select / f Priority / s Status / r Refresh / q Quit{/}');
   
   // 서브태스크 영역 초기화
-  subtaskBox.setLabel(' 선택된 작업의 서브태스크 ');
-  subtaskBox.setContent('{gray-fg}작업을 선택하면 서브태스크가 표시됩니다.{/}');
+  subtaskBox.setLabel(' Selected Task Subtasks ');
+  subtaskBox.setContent('{gray-fg}Select a task to display its subtasks.{/}');
   
   screen.render();
 }
@@ -600,7 +600,7 @@ async function update() {
     if (tasks.length > 0) {
       await render(tasks);
     } else {
-      recommendedBox.setContent(`{yellow-fg}task-master에서 작업을 찾을 수 없습니다.{/}`);
+      recommendedBox.setContent(`{yellow-fg}No tasks found in task-master.{/}`);
       const demoTasks = getDemoTasks();
       await render(demoTasks);
     }
@@ -609,7 +609,7 @@ async function update() {
     const demoTasks = getDemoTasks();
     
     // 데모 모드에서는 추천 작업 정보도 데모로 표시
-    recommendedBox.setContent(`{yellow-fg}task-master를 찾을 수 없습니다. 데모 모드로 실행합니다.{/}`);
+    recommendedBox.setContent(`{yellow-fg}task-master not found. Running in demo mode.{/}`);
     
     await render(demoTasks);
   }
@@ -617,34 +617,34 @@ async function update() {
 
 async function showSubtasks(taskId) {
   try {
-    subtaskBox.setLabel(` 작업 #${taskId}의 서브태스크 `);
+    subtaskBox.setLabel(` Task #${taskId} Subtasks `);
     
     const subtasks = await getSubtasks(taskId);
     if (subtasks.length > 0) {
       // 최대 3개의 서브태스크만 표시 (3줄 공간 활용)
       const displaySubtasks = subtasks.slice(0, 3);
       const subtaskContent = displaySubtasks.map(subtask => {
-        const statusColor = subtask.status === '완료' ? 'green' : subtask.status === '진행중' ? 'blue' : 'gray';
-        const statusSymbol = subtask.status === '완료' ? '✓' : subtask.status === '진행중' ? '►' : '○';
+        const statusColor = subtask.status === 'done' ? 'green' : subtask.status === 'in-progress' ? 'blue' : 'gray';
+        const statusSymbol = subtask.status === 'done' ? '✓' : subtask.status === 'in-progress' ? '►' : '○';
         // 제목 길이 제한
         const shortTitle = subtask.title.length > 60 ? subtask.title.substring(0, 57) + '...' : subtask.title;
         return `{${statusColor}-fg}${statusSymbol} ${subtask.id} ${shortTitle} [${subtask.progress}%]{/}`;
       }).join('\n');
       
       // 더 많은 서브태스크가 있는 경우 안내
-      const moreInfo = subtasks.length > 3 ? `\n{gray-fg}... 외 ${subtasks.length - 3}개 더 (task-master show ${taskId}){/}` : '';
+      const moreInfo = subtasks.length > 3 ? `\n{gray-fg}... and ${subtasks.length - 3} more (task-master show ${taskId}){/}` : '';
       
       subtaskBox.setContent(subtaskContent + moreInfo);
     } else {
-      subtaskBox.setContent(`{gray-fg}작업 #${taskId}에 서브태스크가 없습니다.{/}\n` +
-        `{gray-fg}서브태스크를 추가하려면:{/}\n` +
+      subtaskBox.setContent(`{gray-fg}No subtasks found for task #${taskId}.{/}\n` +
+        `{gray-fg}To add subtasks, use:{/}\n` +
         `{gray-fg}task-master expand ${taskId}{/}`);
     }
     screen.render();
   } catch (e) {
-    subtaskBox.setContent(`{red-fg}서브태스크 로딩 오류:{/}\n` +
+    subtaskBox.setContent(`{red-fg}Subtasks loading error:{/}\n` +
       `{red-fg}${e.message}{/}\n` +
-      `{gray-fg}다시 시도하거나 수동으로 확인하세요.{/}`);
+      `{gray-fg}Try again later or manually check with task-master.{/}`);
     screen.render();
   }
 }
