@@ -22,14 +22,14 @@ npm install -g task-monitor-cli
 ### 방법 2: GitHub에서 직접 설치
 
 ```bash
-npm install -g git+https://github.com/YOUR_USERNAME/task-monitor-cli.git
+npm install -g git+https://github.com/charlie0421/task-monitor-cli.git
 ```
 
 ### 방법 3: Git 서브모듈 (팀 프로젝트 추천)
 
 ```bash
 # 메인 프로젝트에서 서브모듈로 추가
-git submodule add https://github.com/YOUR_USERNAME/task-monitor-cli.git tools/task-monitor
+git submodule add https://github.com/charlie0421/task-monitor-cli.git tools/task-monitor
 git submodule init && git submodule update
 cd tools/task-monitor && npm install && cd ../..
 
@@ -40,10 +40,10 @@ cd tools/task-monitor && npm install && cd ../..
 ### 방법 4: 로컬 개발용
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/task-monitor-cli.git
+git clone https://github.com/charlie0421/task-monitor-cli.git
 cd task-monitor-cli
 npm install
-npm link  # 글로벌 링크 생성
+npm start
 ```
 
 ## 🎯 사용법
@@ -93,7 +93,7 @@ node src/index.js
 ## 🛠️ 개발
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/task-monitor-cli.git
+git clone https://github.com/charlie0421/task-monitor-cli.git
 cd task-monitor-cli
 npm install
 npm start

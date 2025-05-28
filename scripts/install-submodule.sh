@@ -7,7 +7,7 @@ echo "🚀 Task Monitor CLI 서브모듈 설치 중..."
 # 1. 서브모듈 추가 (이미 있으면 건너뛰기)
 if [ ! -d "tools/task-monitor" ]; then
     echo "📦 서브모듈 추가 중..."
-    git submodule add https://github.com/YOUR_USERNAME/task-monitor-cli.git tools/task-monitor
+    git submodule add https://github.com/charlie0421/task-monitor-cli.git tools/task-monitor
 else
     echo "✅ 서브모듈이 이미 존재합니다."
 fi

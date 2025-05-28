@@ -8,7 +8,7 @@
 
 ```bash
 # 메인 프로젝트 루트에서
-git submodule add https://github.com/YOUR_USERNAME/task-monitor-cli.git tools/task-monitor
+git submodule add https://github.com/charlie0421/task-monitor-cli.git tools/task-monitor
 ```
 
 ### 2단계: 초기화 및 설치
