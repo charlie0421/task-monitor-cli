@@ -1,0 +1,43 @@
+{
+  "name": "task-monitor-cli",
+  "version": "1.0.0",
+  "description": "Korean terminal-based task monitoring CLI application for task-master",
+  "main": "src/index.js",
+  "bin": {
+    "task-monitor": "./src/index.js"
+  },
+  "scripts": {
+    "start": "node src/index.js",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "pkg . --targets node18-macos-x64,node18-linux-x64,node18-win-x64 --output dist/task-monitor",
+    "build:mac": "pkg . --targets node18-macos-x64 --output dist/task-monitor-mac",
+    "build:linux": "pkg . --targets node18-linux-x64 --output dist/task-monitor-linux",
+    "build:win": "pkg . --targets node18-win-x64 --output dist/task-monitor-win.exe"
+  },
+  "keywords": [
+    "task",
+    "monitor",
+    "cli",
+    "terminal",
+    "korean",
+    "task-master",
+    "blessed"
+  ],
+  "author": "cheolhyun",
+  "license": "MIT",
+  "dependencies": {
+    "blessed": "^0.1.81",
+    "chalk": "^4.1.2"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/YOUR_USERNAME/task-monitor-cli.git"
+  },
+  "bugs": {
+    "url": "https://github.com/YOUR_USERNAME/task-monitor-cli/issues"
+  },
+  "homepage": "https://github.com/YOUR_USERNAME/task-monitor-cli#readme"
+}
