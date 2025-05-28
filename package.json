@@ -1,6 +1,6 @@
 {
   "name": "task-monitor-cli",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Korean terminal-based task monitoring CLI application for task-master",
   "main": "src/index.js",
   "bin": {
