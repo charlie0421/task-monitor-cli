@@ -108,15 +108,29 @@ let projectProgress = { tasks: {}, subtasks: {} };
 // 데모 데이터 추가 (task-master가 없을 때 사용)
 function getDemoTasks() {
   return [
-    { id: '1', title: '웹사이트 UI 개선', status: 'in-progress', priority: 'high', progress: 75 },
-    { id: '2', title: '데이터베이스 최적화', status: 'in-progress', priority: 'medium', progress: 45 },
-    { id: '3', title: 'API 문서 작성', status: 'in-progress', priority: 'low', progress: 20 },
-    { id: '4', title: '테스트 코드 작성', status: 'in-progress', priority: 'high', progress: 90 },
-    { id: '5', title: '배포 스크립트 작성', status: 'in-progress', priority: 'medium', progress: 60 },
-    { id: '6', title: '보안 검토', status: 'pending', priority: 'high', progress: 0 },
-    { id: '7', title: '성능 최적화', status: 'pending', priority: 'medium', progress: 0 },
-    { id: '8', title: '사용자 매뉴얼 작성', status: 'done', priority: 'low', progress: 100 },
+    { id: '1', title: '웹사이트 UI 개선', status: '완료', priority: 'high', progress: 100 },
+    { id: '2', title: '데이터베이스 최적화', status: '완료', priority: 'medium', progress: 100 },
+    { id: '3', title: 'API 문서 작성', status: '진행중', priority: 'low', progress: 75 },
+    { id: '4', title: '테스트 코드 작성', status: '진행중', priority: 'high', progress: 90 },
+    { id: '5', title: '배포 스크립트 작성', status: '진행중', priority: 'medium', progress: 60 },
+    { id: '6', title: '보안 검토', status: '대기', priority: 'high', progress: 0 },
+    { id: '7', title: '성능 최적화', status: '대기', priority: 'medium', progress: 0 },
+    { id: '8', title: '사용자 매뉴얼 작성', status: '대기', priority: 'low', progress: 0 },
+    { id: '19', title: '모니터링 시스템 구현', status: '대기', priority: 'medium', progress: 0 },
   ];
+}
+
+// 데모 모드 추천 작업 데이터
+function getDemoNextTask() {
+  return {
+    id: '19',
+    title: '모니터링 시스템 구현',
+    status: 'pending',
+    priority: 'medium',
+    dependencies: '18',
+    description: '시스템 상태, 성능, 중요한 오류를 추적하기 위한 모니터링 및 알림 시스템을 생성합니다.',
+    complexity: '8'
+  };
 }
 
 function parseProjectProgress(output) {
@@ -291,44 +305,184 @@ function progressBar(percentage) {
 
 async function getNextTask() {
   try {
-    const output = execSync('task-master next', { 
-      encoding: 'utf-8',
-      timeout: 5000
-    });
+    // 먼저 task-master list를 시도하여 추천 작업 정보를 파싱
+    let output;
+    try {
+      output = execSync('task-master list', { 
+        encoding: 'utf-8',
+        timeout: 5000
+      });
+      
+      // list 출력에서 추천 작업 정보 파싱 시도
+      const nextTask = parseNextTaskFromList(output);
+      if (nextTask && nextTask.id) {
+        return nextTask;
+      }
+      
+      // list에서 추천 작업을 찾지 못하면 next 명령어 시도
+      try {
+        output = execSync('task-master next', { 
+          encoding: 'utf-8',
+          timeout: 5000
+        });
+      } catch (e) {
+        // next 명령어도 실패하면 데모 추천 작업 반환
+        return getDemoNextTask();
+      }
+    } catch (e) {
+      // list 명령어가 실패하면 next 명령어 시도
+      try {
+        output = execSync('task-master next', { 
+          encoding: 'utf-8',
+          timeout: 5000
+        });
+      } catch (e2) {
+        // 모든 task-master 명령어가 실패하면 데모 추천 작업 반환
+        return getDemoNextTask();
+      }
+    }
     
     // 추천 작업 정보 파싱 - 새로운 형식에 맞게 수정
     const lines = output.split('\n');
     let nextTask = {};
+    let inRecommendedSection = false;
     
-    for (const line of lines) {
-      // │로 시작하는 라인에서 정보 추출
-      const cleanLine = line.replace(/│/g, '').trim();
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
       
-      if (cleanLine.includes('🔥 Next Task to Work On:')) {
-        const match = cleanLine.match(/🔥 Next Task to Work On:\s*#(\d+(?:\.\d+)?)\s*-\s*(.+)/);
-        if (match) {
-          nextTask.id = match[1];
-          nextTask.title = match[2].trim();
+      // "⚡ RECOMMENDED NEXT TASK ⚡" 섹션 시작 감지 (여러 형식 지원)
+      if (line.includes('⚡ RECOMMENDED NEXT TASK ⚡') || 
+          line.includes('RECOMMENDED NEXT TASK') ||
+          line.includes('── ⚡ RECOMMENDED NEXT TASK ⚡ ──')) {
+        inRecommendedSection = true;
+        continue;
+      }
+      
+      // 섹션이 끝나면 파싱 중단
+      if (inRecommendedSection && (line.includes('╰─────') || line.includes('└─────') || line.includes('╰─') || line.includes('└─'))) {
+        break;
+      }
+      
+      if (inRecommendedSection) {
+        const cleanLine = line.replace(/[│╭╮╯╰─┌┐└┘├┤┬┴┼]/g, '').trim();
+        
+        // "🔥 Next Task to Work On: #19 - Implement Monitoring System" 형식
+        if (cleanLine.includes('🔥 Next Task to Work On:')) {
+          const match = cleanLine.match(/🔥\s*Next Task to Work On:\s*#?(\d+(?:\.\d+)?)\s*-\s*(.+)/);
+          if (match) {
+            nextTask.id = match[1];
+            nextTask.title = match[2].trim();
+          }
         }
-      } else if (cleanLine.includes('Priority:') && cleanLine.includes('Status:')) {
-        // Priority와 Status가 같은 줄에 있는 경우
-        const priorityMatch = cleanLine.match(/Priority:\s*(\w+)/);
-        const statusMatch = cleanLine.match(/Status:\s*[►○✓]?\s*(\w+(?:-\w+)?)/);
-        if (priorityMatch) nextTask.priority = priorityMatch[1];
-        if (statusMatch) nextTask.status = statusMatch[1];
-      } else if (cleanLine.includes('Dependencies:') && !cleanLine.includes('Priority:')) {
-        const depMatch = cleanLine.match(/Dependencies:\s*(.+)/);
-        if (depMatch) nextTask.dependencies = depMatch[1].trim();
-      } else if (cleanLine.includes('Description:')) {
-        const descMatch = cleanLine.match(/Description:\s*(.+)/);
-        if (descMatch) nextTask.description = descMatch[1].trim();
+        
+        // "Priority: medium   Status: ○ pending" 형식
+        else if (cleanLine.includes('Priority:') && cleanLine.includes('Status:')) {
+          const priorityMatch = cleanLine.match(/Priority:\s*(\w+)/);
+          const statusMatch = cleanLine.match(/Status:\s*[►○✓]?\s*(\w+(?:-\w+)?)/);
+          if (priorityMatch) nextTask.priority = priorityMatch[1];
+          if (statusMatch) nextTask.status = statusMatch[1];
+        }
+        
+        // "Dependencies: 18" 형식
+        else if (cleanLine.includes('Dependencies:') && !cleanLine.includes('Priority:')) {
+          const depMatch = cleanLine.match(/Dependencies:\s*(.+)/);
+          if (depMatch) nextTask.dependencies = depMatch[1].trim();
+        }
+        
+        // "Description: Create a monitoring and alerting system..." 형식
+        else if (cleanLine.includes('Description:')) {
+          const descMatch = cleanLine.match(/Description:\s*(.+)/);
+          if (descMatch) nextTask.description = descMatch[1].trim();
+        }
+        
+        // 다음 줄의 description 연결 처리 (여러 줄 description 지원)
+        else if (nextTask.description && cleanLine && 
+                !cleanLine.includes(':') && 
+                !cleanLine.includes('Subtasks:') &&
+                !cleanLine.includes('Start working:') &&
+                !cleanLine.includes('View details:') &&
+                !cleanLine.includes('🔥') &&
+                cleanLine.length > 10) {
+          nextTask.description += ' ' + cleanLine;
+        }
       }
     }
     
     return nextTask;
   } catch (e) {
-    return null;
+    // 모든 명령어가 실패하면 데모 추천 작업 반환
+    return getDemoNextTask();
   }
+}
+
+// task-master list 출력에서 Next Task 정보를 파싱하는 함수 (fallback)
+function parseNextTaskFromList(output) {
+  const lines = output.split('\n');
+  let nextTask = {};
+  let inRecommendedSection = false;
+  
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    
+    // "⚡ RECOMMENDED NEXT TASK ⚡" 섹션 찾기
+    if (line.includes('⚡ RECOMMENDED NEXT TASK ⚡') || 
+        line.includes('RECOMMENDED NEXT TASK') ||
+        line.includes('── ⚡ RECOMMENDED NEXT TASK ⚡ ──')) {
+      inRecommendedSection = true;
+      continue;
+    }
+    
+    // 섹션이 끝나면 파싱 중단
+    if (inRecommendedSection && (line.includes('╰─────') || line.includes('└─────'))) {
+      break;
+    }
+    
+    if (inRecommendedSection) {
+      const cleanLine = line.replace(/[│╭╮╯╰─┌┐└┘├┤┬┴┼]/g, '').trim();
+      
+      // "🔥 Next Task to Work On: #19 - Implement Monitoring System" 형식
+      if (cleanLine.includes('🔥 Next Task to Work On:')) {
+        const match = cleanLine.match(/🔥\s*Next Task to Work On:\s*#?(\d+(?:\.\d+)?)\s*-\s*(.+)/);
+        if (match) {
+          nextTask.id = match[1];
+          nextTask.title = match[2].trim();
+        }
+      }
+      
+      // "Priority: medium   Status: ○ pending" 형식
+      else if (cleanLine.includes('Priority:') && cleanLine.includes('Status:')) {
+        const priorityMatch = cleanLine.match(/Priority:\s*(\w+)/);
+        const statusMatch = cleanLine.match(/Status:\s*[►○✓]?\s*(\w+(?:-\w+)?)/);
+        if (priorityMatch) nextTask.priority = priorityMatch[1];
+        if (statusMatch) nextTask.status = statusMatch[1];
+      }
+      
+      // "Dependencies: 18" 형식  
+      else if (cleanLine.includes('Dependencies:') && !cleanLine.includes('Priority:')) {
+        const depMatch = cleanLine.match(/Dependencies:\s*(.+)/);
+        if (depMatch) nextTask.dependencies = depMatch[1].trim();
+      }
+      
+      // "Description: Create a monitoring and alerting system..." 형식
+      else if (cleanLine.includes('Description:')) {
+        const descMatch = cleanLine.match(/Description:\s*(.+)/);
+        if (descMatch) nextTask.description = descMatch[1].trim();
+      }
+      
+      // 다음 줄의 description 연결 처리
+      else if (nextTask.description && cleanLine && 
+              !cleanLine.includes(':') && 
+              !cleanLine.includes('Subtasks:') &&
+              !cleanLine.includes('Start working:') &&
+              !cleanLine.includes('View details:') &&
+              !cleanLine.includes('🔥') &&
+              cleanLine.length > 10) {
+        nextTask.description += ' ' + cleanLine;
+      }
+    }
+  }
+  
+  return nextTask;
 }
 
 async function render(tasks) {
@@ -396,20 +550,31 @@ async function render(tasks) {
   const nextTask = await getNextTask();
   if (nextTask && nextTask.id) {
     const priorityColor = nextTask.priority === 'high' ? 'red' : nextTask.priority === 'medium' ? 'yellow' : 'green';
-    const statusText = nextTask.status === 'in-progress' ? '진행중' : nextTask.status === 'pending' ? '대기' : nextTask.status;
-    const statusSymbol = nextTask.status === 'in-progress' ? '►' : nextTask.status === 'pending' ? '○' : '✓';
+    const priorityText = nextTask.priority === 'high' ? '높음' : nextTask.priority === 'medium' ? '중간' : '낮음';
+    const statusText = nextTask.status === 'in-progress' ? '진행중' : nextTask.status === 'pending' ? '대기' : nextTask.status === 'done' ? '완료' : nextTask.status;
+    const statusSymbol = nextTask.status === 'in-progress' ? '►' : nextTask.status === 'pending' ? '○' : nextTask.status === 'done' ? '✓' : '?';
     
     // 제목과 설명을 각각 다른 줄에 표시
-    const shortTitle = nextTask.title.length > 50 ? nextTask.title.substring(0, 47) + '...' : nextTask.title;
-    const shortDesc = nextTask.description && nextTask.description.length > 70 ? 
-      nextTask.description.substring(0, 67) + '...' : nextTask.description || '';
+    const shortTitle = nextTask.title.length > 45 ? nextTask.title.substring(0, 42) + '...' : nextTask.title;
+    const shortDesc = nextTask.description && nextTask.description.length > 65 ? 
+      nextTask.description.substring(0, 62) + '...' : nextTask.description || '';
     
-    recommendedBox.setContent(`{bold}{yellow-fg}추천 작업: #{${nextTask.id}} ${shortTitle}{/}\n` +
-      `{${priorityColor}-fg}${nextTask.priority}{/} ${statusSymbol} ${statusText}${nextTask.dependencies ? ` | 종속성: ${nextTask.dependencies}` : ''}\n` +
-      `${shortDesc ? `${shortDesc}` : '상세 정보: task-master show ' + nextTask.id}`);
+    // 복잡도 정보 처리
+    const complexityInfo = nextTask.complexity ? ` | 복잡도: ${nextTask.complexity}` : '';
+    
+    let content = `{bold}{yellow-fg}🔥 추천 작업: #{${nextTask.id}} ${shortTitle}{/}\n`;
+    content += `{${priorityColor}-fg}우선순위: ${priorityText}{/} ${statusSymbol} ${statusText}${nextTask.dependencies ? ` | 종속성: ${nextTask.dependencies}` : ''}${complexityInfo}\n`;
+    
+    if (shortDesc) {
+      content += `${shortDesc}`;
+    } else {
+      content += `{gray-fg}상세 정보: task-master show ${nextTask.id}{/}`;
+    }
+    
+    recommendedBox.setContent(content);
   } else {
     // 추천 작업이 없을 때
-    recommendedBox.setContent(`{bold}{yellow-fg}추천 다음 작업{/}\n` +
+    recommendedBox.setContent(`{bold}{yellow-fg}🔥 추천 다음 작업{/}\n` +
       `{gray-fg}현재 추천할 작업이 없습니다.{/}\n` +
       `{gray-fg}새 작업을 추가하거나 기존 작업 상태를 확인하세요.{/}`);
   }
@@ -443,17 +608,8 @@ async function update() {
     // task-master가 없으면 데모 데이터 사용
     const demoTasks = getDemoTasks();
     
-    // 진행률을 시간에 따라 변경 (데모용 애니메이션)
-    demoTasks.forEach(task => {
-      if (task.progress < 100) {
-        task.progress = Math.min(100, task.progress + Math.random() * 2);
-      }
-    });
-    
     // 데모 모드에서는 추천 작업 정보도 데모로 표시
-    recommendedBox.setContent(`{yellow-fg}task-master를 찾을 수 없습니다. 데모 모드로 실행합니다.{/}\n` +
-      `{bold}{yellow-fg}추천 작업: #1 - 웹사이트 UI 개선{/}\n` +
-      `{red-fg}high{/} ► 진행중 | 사용자 인터페이스 개선 작업`);
+    recommendedBox.setContent(`{yellow-fg}task-master를 찾을 수 없습니다. 데모 모드로 실행합니다.{/}`);
     
     await render(demoTasks);
   }
